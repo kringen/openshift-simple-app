@@ -1,13 +1,12 @@
 
-var express = require("express");
+var http = require("http");
 const os = require("os");
 
-app = express();
+http.createServer(function (request, response) {
 
-app.get('/', function (req, res) {
-  res.send("Hello from " + os.hostname() + "!\n");
-});
+   response.writeHead(200, {"Content-Type": "text/plain"});
+   
+   response.end("Hello from " + os.hostname() + "!\n");
+}).listen(8080);
 
-app.listen(8080, function () {
-  console.log("App listening on port 8080");
-});
+console.log('Server running at http://127.0.0.1:8080/');
