@@ -1,0 +1,19 @@
+{
+  "name": "simple-app",
+  "version": "1.0.0",
+  "description": "Displays the hostname of the server responding to the web request.",
+  "main": "app.js",
+  "scripts": {
+    "test": "node app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kringen/openshift-simple-app.git"
+  },
+  "author": "ekringen@gmail.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kringen/openshift-simple-app/issues"
+  },
+  "homepage": "https://github.com/kringen/openshift-simple-app#readme"
+}
