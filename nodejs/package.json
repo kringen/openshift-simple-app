@@ -4,6 +4,7 @@
   "description": "Displays the hostname of the server responding to the web request.",
   "main": "app.js",
   "scripts": {
+    "start": "node app.js",
     "test": "node app.js"
   },
   "repository": {
