@@ -1,0 +1,166 @@
+kind: Template
+apiVersion: template.openshift.io/v1
+metadata:
+  name: simple-nodejs-app
+objects:
+  - kind: Service
+    apiVersion: v1
+    metadata:
+      annotations:
+        description: Exposes and load balances the application pods
+      labels:
+        template: ${APPLICATION_NAME}
+      name: ${APPLICATION_NAME}
+    spec:
+      ports:
+      - name: web
+        port: ${{PORT}}
+        targetPort: ${{PORT}}
+      selector:
+        name: ${APPLICATION_NAME}
+  - kind: ImageStream
+    apiVersion: image.openshift.io/v1
+    metadata:
+      annotations:
+        app.openshift.io/vcs-ref: ""
+        app.openshift.io/vcs-uri: "${SOURCE_REPOSITORY_URL}"
+      labels:
+        template: ${APPLICATION_NAME}
+      name: ${APPLICATION_NAME}
+  - kind: Route
+    apiVersion: route.openshift.io/v1
+    metadata:
+      name: ${APPLICATION_NAME}
+      labels:
+        template: ${APPLICATION_NAME}
+    spec:
+      host: ""
+      to:
+        kind: Service
+        name: ${APPLICATION_NAME}
+  - kind: BuildConfig
+    apiVersion: v1
+    metadata:
+      name: ${APPLICATION_NAME}
+      annotations:
+        description: Defines how to build the application from git
+        template.alpha.openshift.io/wait-for-ready: "true"
+      labels:
+        template: ${APPLICATION_NAME}
+    spec:
+      source:
+        type: Git
+        git:
+          uri: "${SOURCE_REPOSITORY_URL}"
+        contextDir: "${CONTEXT_DIRECTORY}"
+      output:
+        to:
+          kind: ImageStreamTag
+          name: ${APPLICATION_NAME}:latest
+      strategy:
+        sourceStrategy:
+          from:
+            kind: ImageStreamTag
+            name: nodejs:14-ubi7
+            namespace: openshift
+        type: Source
+      triggers:
+      - type: Generic
+        generic:
+          secret: ${GITHUB_WEBHOOK_SECRET}
+      - type: GitHub
+        github:
+          secret: ${GITHUB_WEBHOOK_SECRET}
+      - type: ImageChange
+      - type: ConfigChange
+  - kind: DeploymentConfig
+    apiVersion: apps.openshift.io/v1
+    metadata:
+      annotations:
+        description: Defines how to deploy the application server
+        template.alpha.openshift.io/wait-for-ready: "true"
+      labels:
+        template: ${APPLICATION_NAME}
+      name: ${APPLICATION_NAME}
+    spec:
+      replicas: ${{REPLICA_COUNT}}
+      selector:
+        name: ${APPLICATION_NAME}
+      strategy:
+        type: Rolling
+      template:
+        metadata:
+          labels:
+            name: ${APPLICATION_NAME}
+          name: ${APPLICATION_NAME}
+        spec:
+          containers:
+          - env: []
+            image: ' '
+            livenessProbe:
+              httpGet:
+                path: /
+                port: ${{PORT}}
+              initialDelaySeconds: 30
+              timeoutSeconds: 3
+            name: ${APPLICATION_NAME}
+            ports:
+            - containerPort: ${{PORT}}
+            readinessProbe:
+              httpGet:
+                path: /
+                port: ${{PORT}}
+              initialDelaySeconds: 3
+              timeoutSeconds: 3
+            resources:
+              limits:
+                memory: ${RESOURCE_LIMIT_MEMORY}
+      triggers:
+      - type: ImageChange
+        imageChangeParams:
+          automatic: true
+          containerNames:
+          - ${APPLICATION_NAME}
+          from:
+            kind: ImageStreamTag
+            name: ${APPLICATION_NAME}:latest
+      - type: ConfigChange
+parameters:
+  - name: APPLICATION_NAME
+    displayName: Application Name
+    description: The name of the application - used for resource names and labels
+    value: openshift-simple-app
+    required: true
+  - name: SOURCE_REPOSITORY_URL
+    displayName: Source Repository URL
+    description: The URL for the application git repository
+    value: https://github.com/kringen/openshift-simple-app
+    required: true
+  - name: CONTEXT_DIRECTORY
+    displayName: Context Directory
+    description: Directory containing application in source repository.
+    value: /nodejs
+    required: false
+  - name: GITHUB_WEBHOOK_SECRET
+    description: A secret string used to configure the GitHub webhook
+    generate: expression 
+    from: "[a-zA-Z0-9]{40}" 
+  - name: REPLICA_COUNT
+    description: Number of replicas to run
+    value: "1"
+    required: true
+  - name: PORT
+    description: Port on which the application listens.
+    value: "8080"
+    required: false
+  - name: SOURCE_IMAGE_NAME
+    description: Name of the source/base image.
+    value: nodejs:14-ubi7
+    required: false
+  - name: SOURCE_IMAGE_NAMESPACE
+    description: "namespace where the source/base image resides."
+    value: openshift
+    required: false
+  - name: RESOURCE_LIMIT_MEMORY
+    description: "Limit the memory consumed by a pod before it is destroyed and re-created."
+    value: 512Mi
